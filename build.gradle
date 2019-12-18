@@ -26,8 +26,8 @@ apply plugin: 'signing'
 
 version = "3.0.0.SNAPSHOT"
 group = "org.beanio"
-sourceCompatibility = 1.7
-targetCompatibility = 1.7
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
 
 ext.artifactId = "beanio"
 ext.isReleaseVersion = !version.endsWith("SNAPSHOT")
@@ -48,35 +48,8 @@ dependencies {
     //emma group: 'emma', name: 'emma', version: '2.0.5312' 
 }
 
-sourceSets {
-    main {
-        java {
-            srcDir 'src'
-        }
-        resources {
-            srcDir 'src'
-            exclude '**/*.java'
-            exclude '**/package.html'
-        }
-    }
-    test {
-        java {
-            srcDir 'test'
-            include '**/*.java'
-        }
-        groovy {
-            srcDir 'test'
-            include '**/*.groovy'
-        }
-        resources {
-            srcDir 'test'
-            exclude '**/*.java'
-            exclude '**/*.groovy'
-        }
-    }
-}
-
 javadoc {
+    failOnError false
     options.header = "BeanIO $version"
     options.docTitle = "<h2>BeanIO 3.0 API</h2>"
     options.footer = "<i>Copyright &copy; 2010-2014 Kevin Seim</i>"
@@ -90,7 +63,7 @@ jar {
     includeEmptyDirs = false
     ext.metaInfDir = "$buildDir/tmp/jar"
     // create a list of exported packages for OSGi
-    ant.dirset(id:"osgi.dirs", dir:"src/org/beanio", excludes: "xsd/**")
+    ant.dirset(id:"osgi.dirs", dir:"src/main/java/org/beanio", excludes: "xsd/**")
     ant.pathconvert(refid:"osgi.dirs", property:"osgi.packages", dirsep:".", pathsep:";version=\"${version}\",") {
         map(from:"$basedir/src/", to:"")
     }
@@ -112,10 +85,6 @@ jar {
     doLast {
         manifest.writeTo("$metaInfDir/MANIFEST.MF")
     }
-}
-
-test {
-  jvmArgs = ["-XX:-UseSplitVerifier"]
 }
 
 task sourcesJar(type: Jar, dependsOn:classes) {
@@ -165,7 +134,6 @@ task zip(type: Zip, dependsOn: [javadoc, jar] ) {
     from("$projectDir") {
         include "docs/**"
         include "src/**"
-        include "test/**"
         include "*.txt"
         include "*.xml"
         include "*.properties"
@@ -199,43 +167,4 @@ artifacts {
 signing {
     required { isReleaseVersion && gradle.taskGraph.hasTask("uploadArchives") }
     sign configurations.archives
-}
-
-uploadArchives {
-    repositories {
-        mavenDeployer {
-            beforeDeployment { MavenDeployment deployment -> signPom(deployment) }
-            repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
-                authentication(userName: sonatypeUsername, password: sonatypePassword)
-            }
-            pom.project {
-               name 'BeanIO'
-               artifactId "$artifactId"
-               packaging 'jar'
-               description 'A Java un/marshalling library for CSV, XML, delimited and fixed length stream formats.'
-               url 'http://beanio.org/'
-               scm {
-                   url 'http://beanio.googlecode.com/svn'
-                   connection 'scm:svn:http://beanio.googlecode.com/svn/trunk'
-                   developerConnection 'scm:svn:https://beanio.googlecode.com/svn/trunk'
-               }
-               licenses {
-                   license {
-                       name 'The Apache Software License, Version 2.0'
-                       url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-                       distribution 'repo'
-                   }
-               }
-               developers {
-                   developer {
-                       id 'kevinseim'
-                       name 'Kevin Seim'
-                   }
-               }
-            }
-            pom.whenConfigured {
-                dependencies.find { dep -> dep.artifactId == 'commons-logging' }.optional = true
-            }
-        }
-    }
 }
